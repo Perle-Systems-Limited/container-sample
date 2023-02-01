@@ -1,0 +1,2 @@
+[flake8]
+    extend-ignore=ANN # "pip3 install flake8-annotations"
