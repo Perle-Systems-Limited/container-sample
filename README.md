@@ -44,6 +44,9 @@ online swagger editor at <https://editor.swagger.io/>
 
 #### BUILDING AN IMAGE
 
+A prebuilt pslsample.img.gz (compressed image) is included in this repository.
+Use the following instructions to build it yourself.
+
 If you are on a Linux/Cygwin box with docker installed,
 type "make" to create the image.  This will use the supplied
 Dockerfile to create a sample image using the python scripts.
