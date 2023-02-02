@@ -21,7 +21,9 @@ $(IMG): Dockerfile pslrestful.py mon.py
 	docker image build -t $(NAME) .
 	# Save as file
 	docker image save $(NAME) > $@
-	gzip < $@ > $@.gz
+
+$(IMG).gz: $(IMG)
+	gzip < $< > $@
 
 test: $(IMG)
 	# Run directly in local docker
