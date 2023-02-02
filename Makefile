@@ -28,5 +28,5 @@ test: $(IMG)
 	docker run --rm -t -e IP=$(IP) -e PORT=$(PORT) -e USER=$(USER) -e PASS=$(PASS) $(NAME)
 
 clean:
-	rm -rf __pycache__ $(IMG) $(IMG).gz
+	rm -rf __pycache__ $(IMG)
 	-docker image rm $(NAME)
