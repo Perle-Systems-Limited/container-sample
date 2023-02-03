@@ -115,7 +115,7 @@ is already set up on the router.
 	container network net78
 	 network-interface BVI 78
 
-	container name pslsample
+	container name pslsample_cont
 	 image pslsample
 	 network net78 ip address 192.168.78.11
 	 environment IP 192.168.78.1
@@ -132,7 +132,7 @@ bridged into BVI 1:
 
 Once the container is running, you can examine its progress via:
 
-	show container log pslsample
+	show container log pslsample_cont
 
 By default the image runs `/usr/local/bin/mon.py`.
 If you want to look around in the container itself,
@@ -142,7 +142,7 @@ run an interactive shell instead of mon.py:
 	arguments 1 /bin/bash
 	arguments 2 -i
 
-Then restart it and do `container connect pslsample` for shell
+Then restart it and do `container connect pslsample_cont` for shell
 access in the container.
 
 The scripts are in /usr/local/bin/ and can be modified inside the
