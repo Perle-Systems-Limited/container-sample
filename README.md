@@ -148,7 +148,8 @@ access in the container.
 The scripts are in /usr/local/bin/ and can be modified inside the
 container if you use the "apt" command to install a simple editor
 (e.g. `apt install nano` or `apt install vim-tiny`).  Be aware that
-any changes you make are in that container only and not the source
-image pslsample.img, and so will be lost on a forced restart.
+any changes you make will be in that container only and not the source
+image pslsample.img, and so will be lost on a restart done via
+"container force-remove restart".
 
 You can run the script when connected by typing "mon.py".
