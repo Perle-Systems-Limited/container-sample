@@ -74,7 +74,7 @@ def main(IP, PORT, USER, PASS):
 
 
 def usage(name):
-    usage = '''Usage: {name} [IP PORT USER PASS]
+    usage = f'''Usage: {name} [IP PORT USER PASS]
 
 IP PORT USER PASS can also be set in the environment.
 On Unix:
