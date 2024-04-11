@@ -44,25 +44,26 @@ class PSL_RESTfulAPI:
         if logcb is not None and not callable(logcb):
             raise TypeError('logcb must be callable')
         self.logcb = logcb
-        self.loadcookie()
+        self.__loadcookie()
         if not self.cookie:
             self.login()
 
-    def _requestop(self, op, args):
+    def __requestop(self, op, url, *args, **kwargs):
         '''Run a generic request operation, retrying login if required'''
         def badlogin(resp):
             return ((resp.status_code == 401) or
                     (b'Missing authorization' in resp.content) or
                     (b'User is not authorized' in resp.content))
 
-        args['cookies'] = self.cookie
+        url = self.url_prefix + url
+        kwargs['cookies'] = self.cookie
 
         # Try the request, retrying on any IO error (RESTful probably down)
         sleeptime = 1
         for retry in range(self.retries):
             conerr = None
             try:
-                resp = op(**args)
+                resp = op(url=url, *args, **kwargs)
                 break
             except (ConnectionError, requests.RequestException) as e:
                 if self.logcb is not None:
@@ -79,33 +80,32 @@ class PSL_RESTfulAPI:
         if badlogin(resp):
             # Redo login and try again
             self.login()
-            args['cookies'] = self.cookie
-            resp = op(**args)
+            kwargs['cookies'] = self.cookie
+            resp = op(url=url, *args, **kwargs)
             if badlogin(resp):
                 raise Exception(resp.content)
 
         return resp
 
-    def get(self, url, cmd={}):
-        '''Perform a GET.  cmd unused here.'''
-        api_url = self.url_prefix + url
-        return self._requestop(requests.get, {'url': api_url})
+    def get(self, url, *args, **kwargs):
+        '''Perform a GET.'''
+        return self.__requestop(requests.get, url, *args, **kwargs)
 
-    def put(self, url, cmd={}):
-        '''Perform a PUT'''
+    def put(self, url, cmd={}, *args, **kwargs):
+        '''Perform a PUT. cmd must be a json-like dict.'''
         if not isinstance(cmd, dict):
             raise TypeError('dict-like object required for cmd')
-        api_url = self.url_prefix + url
-        return self._requestop(requests.put, {'url': api_url, 'json': cmd})
+        kwargs['json'] = cmd
+        return self.__requestop(requests.put, url, *args, **kwargs)
 
-    def post(self, url, cmd={}):
-        '''Perform a POST'''
+    def post(self, url, cmd={}, *args, **kwargs):
+        '''Perform a POST. cmd must be a json-like dict.'''
         if not isinstance(cmd, dict):
             raise TypeError('dict-like object required for cmd')
-        api_url = self.url_prefix + url
-        return self._requestop(requests.post, {'url': api_url, 'json': cmd})
+        kwargs['json'] = cmd
+        return self.__requestop(requests.post, url, *args, **kwargs)
 
-    def loadcookie(self):
+    def __loadcookie(self):
         '''Load cached cookie'''
         try:
             with open(self._COOKIEFILE, 'rb') as fp:
@@ -113,7 +113,7 @@ class PSL_RESTfulAPI:
         except Exception:
             self.cookie = None
 
-    def savecookie(self, cookie):
+    def __savecookie(self, cookie):
         '''Save current cookie in persistent storage'''
         if not cookie:
             return
@@ -121,14 +121,23 @@ class PSL_RESTfulAPI:
         with open(self._COOKIEFILE, 'wb') as fp:
             pickle.dump(self.cookie, fp)
 
+    def __delcookie(self):
+        '''Delete cookie data'''
+        try:
+            os.remove(self._COOKIEFILE)
+        except FileNotFoundError:
+            pass
+        self.cookie = None
+
     def login(self):
-        '''Perform a login'''
+        '''Perform a login.  This is done automatically as needed.'''
         # Do not use self.post() to avoid login recursion.
         credentials = {'username': self.username, 'password': self.password}
+        self.__delcookie()
         resp = requests.post(self.url_prefix + '/login', json=credentials)
         if not resp.ok:
             raise PermissionError('Invalid login')
-        self.savecookie(resp.cookies.get_dict())
+        self.__savecookie(resp.cookies.get_dict())
 
 
 def main():
@@ -136,8 +145,9 @@ def main():
     USER = os.getenv('USER', 'admin')
     PASS = os.getenv('PASS', 'mypass')
     IP = os.getenv('IP', '192.168.0.123')
+
     print(f'Connecting as {USER}/{PASS} to host {IP}')
-    irg = PSL_RESTfulAPI(USER, PASS, IP)
+    irg = PSL_RESTfulAPI(USER, PASS, IP, retries=3, logcb=print)
 
     data = irg.get('/system/general/clock').json()
     now = data['clock']
