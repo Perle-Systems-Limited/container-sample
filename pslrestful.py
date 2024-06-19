@@ -19,11 +19,18 @@ class PSL_RESTfulAPI:
     Generic access to Perle RESTful API
 
     Provides get/put/post methods and automatic authorization.
+
+    Useful class attributes:
+
+    COOKIEFILE: where the login cookies are persisted.
+    VERIFY_TLS: whether or not TLS connection should be validated.
     '''
 
     # Storage for the login cookie
-    _COOKIEFILE = os.path.join(os.getenv('HOME', tempfile.gettempdir()),
-                               '.pslcookie')
+    COOKIEFILE = os.path.join(os.getenv('HOME', tempfile.gettempdir()),
+                              '.pslcookie')
+    # Do not verify TLS by default.
+    VERIFY_TLS = False
 
     def __init__(self, username, password, host, port=8080,
                  schema='http', ver='v1.1', retries=10, logcb=None):
@@ -53,10 +60,11 @@ class PSL_RESTfulAPI:
         def badlogin(resp):
             return ((resp.status_code == 401) or
                     (b'Missing authorization' in resp.content) or
-                    (b'User is not authorized' in resp.content))
+                    (b'User is not authorized for this api' in resp.content))
 
         url = self.url_prefix + url
         kwargs['cookies'] = self.cookie
+        kwargs['verify'] = self.VERIFY_TLS
 
         # Try the request, retrying on any IO error (RESTful probably down)
         sleeptime = 1
@@ -108,7 +116,7 @@ class PSL_RESTfulAPI:
     def __loadcookie(self):
         '''Load cached cookie'''
         try:
-            with open(self._COOKIEFILE, 'rb') as fp:
+            with open(self.COOKIEFILE, 'rb') as fp:
                 self.cookie = pickle.load(fp)
         except Exception:
             self.cookie = None
@@ -118,13 +126,13 @@ class PSL_RESTfulAPI:
         if not cookie:
             return
         self.cookie = cookie
-        with open(self._COOKIEFILE, 'wb') as fp:
+        with open(self.COOKIEFILE, 'wb') as fp:
             pickle.dump(self.cookie, fp)
 
     def __delcookie(self):
         '''Delete cookie data'''
         try:
-            os.remove(self._COOKIEFILE)
+            os.remove(self.COOKIEFILE)
         except FileNotFoundError:
             pass
         self.cookie = None
@@ -134,19 +142,32 @@ class PSL_RESTfulAPI:
         # Do not use self.post() to avoid login recursion.
         credentials = {'username': self.username, 'password': self.password}
         self.__delcookie()
-        resp = requests.post(self.url_prefix + '/login', json=credentials)
+        resp = requests.post(self.url_prefix + '/login',
+                             json=credentials, verify=self.VERIFY_TLS)
         if not resp.ok:
             raise PermissionError('Invalid login')
         self.__savecookie(resp.cookies.get_dict())
 
 
 def main():
-    '''Test mainline.  Adjust parameters for your location.'''
+    '''
+    Sample usage of PSL_RESTfulAPI.
+
+    Do not modify this file.  Normal usage would be to write your own
+    separate python3 script and do:
+
+        from pslrestful import PSL_RESTfulAPI
+
+    ...in it to import the API class and use it in a similar
+    way as this main().
+    '''
     USER = os.getenv('USER', 'admin')
     PASS = os.getenv('PASS', 'mypass')
     IP = os.getenv('IP', '192.168.0.123')
 
     print(f'Connecting as {USER}/{PASS} to host {IP}')
+    # See PSL_RESTfulAPI __init__() for more possible parameters
+    # (e.g. port, schema, retries)
     irg = PSL_RESTfulAPI(USER, PASS, IP, retries=3, logcb=print)
 
     data = irg.get('/system/general/clock').json()
