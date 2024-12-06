@@ -1,0 +1,35 @@
+#
+# Perle docker sample Makefile
+#
+# On a Linux or Cygwin box, type "make".
+#
+
+NAME=pslsample_x86
+IMG=$(NAME).img
+ARCH=x86_64
+DOCKERFILE=Dockerfile_x86
+
+# UPDATE WITH YOUR ROUTER IP/PORT/USER/PASS values and do "make test"
+IP ?= 192.168.0.123
+PORT ?= 8080
+USER ?= admin
+PASS ?= perle1
+
+$(IMG): Dockerfile_x86 pslrestful.py mon.py
+	# Install build emulation if needed (for amd64 routers)
+	test `arch` = $(ARCH) || { docker history -q aptman/qus > /dev/null || docker run --rm --privileged aptman/qus -s -- -p $(ARCH); }
+	# Build the image
+	docker image build -f $(DOCKERFILE) -t $(NAME) .
+	# Save as file
+	docker image save $(NAME) > $@
+
+$(IMG).gz: $(IMG)
+	gzip < $< > $@
+
+test: $(IMG)
+	# Run directly in local docker
+	docker run --rm -t -e IP=$(IP) -e PORT=$(PORT) -e USER=$(USER) -e PASS=$(PASS) $(NAME)
+
+clean:
+	rm -rf __pycache__ $(IMG)
+	-docker image rm $(NAME)

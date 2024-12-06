@@ -1,5 +1,13 @@
 # Perle sample container for routers
 
+#### update on 2024-12-06
+
+Add a build support to make a x86 image to run on scrx
+
+To make a x86 container image, type "make -f Makefile_x86"
+To make a x86 container image tarball, type "sudo make -f Makefile_x86 pslsample_x86.img.gz"
+
+
 #### OVERVIEW
 
 This directory contains two sample python3 scripts.  They can be run
